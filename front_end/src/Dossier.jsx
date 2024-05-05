@@ -1,9 +1,9 @@
 import { Container, CardMedia, Typography, Divider, Grid, Stack } from '@mui/material';
 import HighlightCard from './HighlIghtCard';
-import DossierSkeleton from './DossierSkeleton';
+import { useMemo } from 'react';
 
 const DossierPage = () => {
-  const loading = false
+//   const loading = false
   const rootStyle = {
     paddingTop: '64px',
     paddingBottom: '64px',
@@ -18,6 +18,13 @@ const DossierPage = () => {
     margin: '24px 0',
   };
 
+  const candidateInfoP = useMemo(() => {
+    const profile = localStorage.getItem('profile');
+    if (profile) {
+      return JSON.parse(profile);
+    }
+    return null;
+  }, []);
   const candidateInfo = {
     name: "John Doe",
     avatar: "https://publicdomainvectors.org/download.php?file=Male-Avatar.svg",
@@ -42,14 +49,13 @@ const DossierPage = () => {
             points: ['point 1', 'point 2', 'point 3'],
             tags: ['ml', 'models', 'pytorch']
         }
-    ]
+    ],
+    ...candidateInfoP
   }
 
   return (
     <Container maxWidth="md" style={rootStyle}>
-        {loading === true ? (
-            <DossierSkeleton />
-        ) : (
+        {(
             <>
                 <Typography variant="h2" gutterBottom fontWeight="bold" sx={{color: "text.primary"}}>
                     Subject Dossier
@@ -88,8 +94,8 @@ const DossierPage = () => {
                     Productivity Highlights
                 </Typography>
                 <Stack spacing={2} sx={{color: "text.secondary"}}>
-                    {candidateInfo.highlights.map((item) => (
-                            <HighlightCard key={item.title} title={item.title} points={item.points} codeBase={item.codeBase} tags={item.tags}/>
+                    {candidateInfo.highlights.map((item, idx) => (
+                            <HighlightCard key={idx } title={item ?? ''} points={item?.points ?? []} codeBase={item?.codeBase ?? ''} tags={item?.tags ?? []}/>
                         ))}
                 </Stack>
             </>
