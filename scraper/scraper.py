@@ -7,29 +7,13 @@ from langchain_text_splitters import (
 from pymilvus import Collection, connections, CollectionSchema, FieldSchema, DataType
 from langchain_community.vectorstores import Milvus
 from langchain_community.embeddings import OctoAIEmbeddings
-from langchain_community.llms.octoai_endpoint import OctoAIEndpoint
 from langchain_core.documents import Document
 import uuid
+from scraper.vector_db import vector_store
 
-llm = OctoAIEndpoint(
-    model_kwargs={
-        "model": "mixtral-8x7b-instruct-fp16",
-        "max_tokens": 200,
-        "presence_penalty": 0,
-        "temperature": 0.1,
-        "top_p": 0.9,
-    }
-)
-embeddings = OctoAIEmbeddings(endpoint_url="https://text.octoai.run/v1/embeddings")
 
 # connections.connect(alias="default", host="localhost", port="19530")
 
-vector_store = Milvus(
-    #     splits,
-    embeddings,
-    connection_args={"host": "localhost", "port": 19530},
-    collection_name="linkedin",
-)
 
 load_dotenv()
 # OPENAI_API_KEY = os.environ["OPENAI_API_TOKEN"]
@@ -68,11 +52,11 @@ default_info = {
 }
 
 
-def scrape_linkedin(info):
+def scrape_website(info):
     """
-    Scrapes LinkedIn for the given information
+    Scrapes Website for the given information
     :param info: dictionary of the following items:
-        - linkedin_url: URL of the LinkedIn profile
+        - website_url: URL of the Website profile
         - unique_id: unique ID of the person
     :return: dictionary of the following items:
         - name: name of the person
@@ -84,10 +68,10 @@ def scrape_linkedin(info):
         - education: list of educations
         - skills: list of skills
     """
-    # Code to scrape LinkedIn
+    # Code to scrape Website
     # url = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,headline,picture-url,industry,summary,specialties,positions:(id,title,summary,start-date,end-date,is-current,company:(id,name,type,size,industry,ticker)),educations:(id,school-name,field-of-study,start-date,end-date,degree,activities,notes),associations,interests,num-recommenders,date-of-birth,publications:(id,title,publisher:(name),authors:(id,name),date,url,summary),patents:(id,title,summary,number,status:(id,name),office:(name),inventors:(id,name),date,url),languages:(id,language:(name),proficiency:(level,name)),skills:(id,skill:(name)),certifications:(id,name,authority:(name),number,start-date,end-date),courses:(id,name,number),recommendations-received:(id,recommendation-type,recommendation-text,recommender),honors-awards,three-current-positions,three-past-positions,volunteer)?oauth2_access_token={ACCESS_TOKEN}"
     # response = requests.get(url)
-    url = info["linkedin_url"]
+    url = info["website_url"]
 
     headers_to_split_on = [
         ("h1", "Header 1"),
@@ -120,16 +104,22 @@ def scrape_linkedin(info):
     metadatas = []
 
     my_ids = []
+    try:
+        ppkexpr = f"website_url == '{str(url)}'"
+        ppks = vector_store.get_pks(expr=ppkexpr)
+        vector_store.delete(ppks)
+    except Exception as e:
+        print(e)
     for split in splits:
         idv = str(uuid.uuid4())
         print(f"Split ID: {idv}")
         my_ids.append(idv)
         texts.append(split.page_content)
-        metadatas.append({"unique_id": info["unique_id"]})
+        metadatas.append({"unique_id": info["unique_id"], "website_url": str(url)})
         doc = Document(
             id=idv,
             page_content=split.page_content,
-            metadata={"unique_id_u": info["unique_id"]},
+            metadata={"unique_id_u": info["unique_id"], "website_url": url},
         )
         docs.append(doc)
     # Search pks (primary keys) using expression
@@ -138,10 +128,3 @@ def scrape_linkedin(info):
     # mr = vector_store.upsert(pks, docs, auto_id=True)
     mr = vector_store.add_texts(texts=texts, metadatas=metadatas, ids=my_ids)
     return mr
-
-
-def respond_with_info(info):
-    # This will only get documents for Harrison
-    vector_store.as_retriever(
-        search_kwargs={"expr": f'unique_id == "{info["unique_id"]}"'}
-    ).invoke("where did i work?")
