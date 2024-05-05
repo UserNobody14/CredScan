@@ -43,7 +43,7 @@ class ProfileResponse(BaseModel):
     profile_id: str
     name: str
     summary: str
-    highlights: str
+    highlights: list[str]
     strengths: str
 
 

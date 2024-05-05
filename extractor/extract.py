@@ -2,13 +2,16 @@ from scraper import llm
 from scraper import vector_db
 
 from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import (
+    StrOutputParser,
+    CommaSeparatedListOutputParser,
+)
 
 from langchain.prompts import ChatPromptTemplate
 
 vector_store = vector_db.vector_store
 
-template = """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+template = """You are a highly skilled assistant for github question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 Question: {question} 
 Context: {context} 
 Answer:"""
@@ -40,10 +43,10 @@ def extract_github_highlight(info):
         {"context": retriever, "question": RunnablePassthrough()}
         | prompt
         | llm.llm
-        | StrOutputParser()
+        | CommaSeparatedListOutputParser()
     )
     return chain.invoke(
-        "Highlight the key achievements of the person in the given context."
+        "Highlight the key achievements of the person in the given context. Provide a comma-separated list."
     )
 
 
@@ -74,7 +77,9 @@ def extract_github_strengths(info):
         | llm.llm
         | StrOutputParser()
     )
-    return chain.invoke("What are the strengths of the person in the given context.")
+    return chain.invoke(
+        "What are the strengths of the person, their best code, in the given context?"
+    )
 
 
 def extract_all_safe(info):
